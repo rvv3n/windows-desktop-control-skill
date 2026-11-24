@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "windows-mcp": {
+      "command": "C:\\Users\\<YOUR_USERNAME>\\.local\\bin\\windows-mcp.exe",
+      "args": [
+        "serve",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "ANONYMIZED_TELEMETRY": "false"
+      }
+    }
+  }
+}
