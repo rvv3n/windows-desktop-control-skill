@@ -51,6 +51,11 @@ Never click or type blindly. Always follow this loop:
   the workspace file/terminal tools or built-in browser subagent, prefer those
   over GUI automation. Use `windows-mcp` specifically for native Windows UI and
   on-screen desktop control.
+* **NovaBrowser profiles go through their own skill**: when the task targets a
+  website inside a NovaBrowser profile (an isolated account with its own proxy
+  and fingerprint), use the `novabrowser-browser-control` skill and its
+  `novabrowser` MCP server instead of clicking the browser window: it drives
+  the profile in the background, without taking the user's mouse or keyboard.
 * **Multi-step focus recovery**: If a click or keystroke lands in the wrong
   window, immediately call `App(mode="switch", ...)` or `Snapshot` to re-sync.
 
