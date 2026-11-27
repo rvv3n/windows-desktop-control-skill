@@ -19,6 +19,12 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 # 2. Install windows-mcp tool
 Write-Host "Installing windows-mcp..."
 uv tool install windows-mcp --upgrade
+if ($LASTEXITCODE -ne 0) {
+    # Typical cause: a running windows-mcp (started by Antigravity or Claude) locks its folder, and
+    # uv stops halfway through - the old package removed, the new one not installed. Stop here
+    # rather than register a server that cannot start.
+    throw "uv could not install windows-mcp (exit code $LASTEXITCODE). If it is in use, quit Antigravity and Claude Desktop, then run this script again."
+}
 
 $exePath = Join-Path $env:USERPROFILE ".local\bin\windows-mcp.exe"
 if (-not (Test-Path $exePath)) {
@@ -88,8 +94,18 @@ if (Test-Path $geminiDir) {
 $claudeJson = Join-Path $env:USERPROFILE ".claude.json"
 if (Get-Command claude -ErrorAction SilentlyContinue) {
     # The CLI owns ~/.claude.json: let it write the file it keeps open.
-    & claude mcp remove --scope user $ServerName 2>$null | Out-Null
-    & claude mcp add --scope user $ServerName -e ANONYMIZED_TELEMETRY=false -- $exePath @serverArgs
+    # Windows PowerShell 5.1 with ErrorActionPreference=Stop turns any stderr line of a native
+    # command into a terminating error. `claude mcp remove` writes one when the server is not
+    # registered yet - the usual case on a first install - and the script used to stop right here.
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & claude mcp remove --scope user $ServerName *> $null
+        & claude mcp add --scope user $ServerName -e ANONYMIZED_TELEMETRY=false -- $exePath @serverArgs
+        if ($LASTEXITCODE -ne 0) { throw "claude mcp add failed (exit code $LASTEXITCODE)." }
+    } finally {
+        $ErrorActionPreference = $previous
+    }
     Write-Host "Registered $ServerName in Claude Code (user scope)"
 } elseif (Test-Path $claudeJson) {
     Set-McpServer $claudeJson (@{ type = "stdio" } + $entry)
